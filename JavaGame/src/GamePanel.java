@@ -12,7 +12,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 				   // Player can use it
     public static int HEIGHT = 400;
 
-    private Thread thread; // we create a new thread
+    private Thread thread; // we create a new thread(нишка(поток))
     private boolean running; // this is the boolean that will tell us if the
 			     // game is running.
 
@@ -26,12 +26,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 				 // the player
     public static ArrayList<Bullet> bullets;
     public static ArrayList<Enemy> enemies;
+    public static ArrayList<PowerUp> powerups;
+    public static ArrayList<Explosion> explosions;
+    public static ArrayList<Text> texts;
+    
     private long waveStartTimer;
     private long waveStartTimerDiff; // keep track how much time is passed by
     private int waveNumber;
     private boolean waveStart; // it tells us when to start create enemies or
 			       // not
     private int waveDelay = 2000;
+
+    private long slowDownTimer;
+    private long slowDownTimerDiff;
+    private int slowDownLength = 6000; // slowing down for 6 sec.
 
     // CONSTRUCTOR
     public GamePanel() {
@@ -77,7 +85,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	player = new Player(); // here we initialize the player
 	bullets = new ArrayList<Bullet>(); // here we initialize the bullet
 	enemies = new ArrayList<Enemy>(); // here we initialize the enemy
-
+	powerups = new ArrayList<PowerUp>();
+	explosions = new ArrayList<Explosion>();
+	texts = new ArrayList<Text>();
+	
 	waveStartTimer = 0;
 	waveStartTimerDiff = 0;
 	waveStart = true;
@@ -149,13 +160,25 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 		totalTime = 0;
 	    }
 	}
+	g.setColor(new Color(0, 100, 255));
+	g.fillRect(0, 0, WIDTH, HEIGHT);
+	g.setColor(Color.WHITE);
+	g.setFont(new Font("Century Gothic", Font.PLAIN, 16));
+	String s = "G A M E   O V E R";
+	int length = (int) g.getFontMetrics().getStringBounds(s, g).getWidth();
+	g.drawString(s, (WIDTH - length) / 2, HEIGHT / 2);
+	s = "Final Score: " + player.getScore();
+	length = (int) g.getFontMetrics().getStringBounds(s, g).getWidth();
+	g.drawString(s, (WIDTH - length) / 2, HEIGHT / 2 + 30);
+	gameDraw(); // ends the game
     }
 
     private void gameUpdate() { // updating everything in the game(player
 				// possition, enemy possition, projectiles and
 				// also deal with collision, everything that the
 				// game needs to do(all of the game logic goes
-				// into the gameUpdate))
+				// into the gameUpdate)) Изчислява всички
+				// променливи в играта.
 	// new wave
 	if (waveStartTimer == 0 && enemies.size() == 0) {
 	    waveNumber++;
@@ -191,7 +214,33 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	for (int i = 0; i < enemies.size(); i++) {
 	    enemies.get(i).update();
 	}
-
+	// powerup update
+	for (int i = 0; i < powerups.size(); i++) {
+	    boolean remove = powerups.get(i).update(); // we have to check if we
+						       // need to remove them
+	    if (remove) {
+		powerups.remove(i);
+		i--;
+	    }
+	}
+	// explosion update
+	for (int i = 0; i < explosions.size(); i++) {
+	    boolean remove = explosions.get(i).update(); // we have to check if
+							 // we need to remove
+							 // them
+	    if (remove) {
+		explosions.remove(i);
+		i--;
+	    }
+	}
+	// text update
+	for (int i = 0; i < texts.size(); i++) {
+	    boolean remove = texts.get(i).update();
+	    if (remove) {
+		texts.remove(i);
+		i--;
+	    }
+	}
 	// bullet-enemy collision (we start to shoot them)
 	for (int i = 0; i < bullets.size(); i++) {
 
@@ -228,11 +277,31 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	for (int i = 0; i < enemies.size(); i++) {
 	    if (enemies.get(i).isDead()) {
 		Enemy e = enemies.get(i);
-		player.addScore(e.getType() + e.getRank()); // add points for killing enemies
+		player.addScore(e.getType() + e.getRank()); // add points for
+							    // killing enemies
 		enemies.remove(i);
 		i--;
 	    }
 	}
+	// chance for powerup
+	double rand = Math.random();
+	if (rand < 0.001) { // this is the chance for this event to happend
+	    powerups.add(new PowerUp(1, e.getx(), e.gety()));
+	} else if (rand < 0.020) {
+	    powerups.add(new PowerUp(3, e.getx(), e.gety()));
+	} else if (rand < 0.120) {
+	    powerups.add(new PowerUp(2, e.getx(), e.gety()));
+	} else if (rand < 0.130) {
+	    powerups.add(new PowerUp(4, e.getx(), e.gety()));
+	}
+	player.addScore(e.getType() + e.getRank());
+	enemies.remove(i);
+	i--;
+
+	e.explode();
+	explosions.add(new Explosion(e.getx(), e.gety(), e.getr(),
+		e.getr() + 30));
+
 	// check dead player
 	if (player.isDead()) {
 	    running = false;
@@ -295,7 +364,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 			    "Double Power"));
 		}
 		if (type == 4) {
-		    slowDownTimer = System.nanoTime();
+		    slowDownTimer = System.nanoTime(); // set the slowdowntimer
+						       // to the current time
 		    for (int j = 0; j < enemies.size(); j++) {
 			enemies.get(j).setSlow(true);
 		    }
@@ -308,7 +378,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	}
 
 	// slowdown update
-	if (slowDownTimer != 0) {
+	if (slowDownTimer != 0) { // we are in a slowdown mode
 	    slowDownTimerDiff = (System.nanoTime() - slowDownTimer) / 1000000;
 	    if (slowDownTimerDiff > slowDownLength) {
 		slowDownTimer = 0;
@@ -323,6 +393,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 				// currently active on to the screen(the player,
 				// the enemies, the background, the projectiles,
 				// everything).Graphical representation.
+				// Създаване на видео чрез рисуване.
 	// draw background
 	g.setColor(new Color(0, 100, 255)); // draw the offscreen image. This is
 					    // the color of the background
@@ -334,7 +405,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	// bullet is
 	// actually being
 	// removed
-
+	
+	// draw slowdown screen
+	if (slowDownTimer != 0) {
+	    g.setColor(new Color(255, 255, 255, 64)); // very transperant white
+	    g.fillRect(0, 0, WIDTH, HEIGHT); // fillup the entire screen
+	}
 	// draw player
 	player.draw(g);
 
@@ -346,6 +422,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	// draw enemy
 	for (int i = 0; i < enemies.size(); i++) {
 	    enemies.get(i).draw(g);
+	}
+	// draw powerups
+	for (int i = 0; i < powerups.size(); i++) {
+	    powerups.get(i).draw(g);
+	}
+	// draw explosions
+	for (int i = 0; i < explosions.size(); i++) {
+	    explosions.get(i).draw(g);
+	}
+	// draw text
+	for (int i = 0; i < texts.size(); i++) {
+	    texts.get(i).draw(g);
 	}
 	// draw wave number
 	if (waveStartTimer != 0) { // if it's not 0 we are in the process of
@@ -379,7 +467,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	g.fillRect(20, 40, player.getPower() * 8, 8);
 	g.setColor(Color.YELLOW.darker());
 	g.setStroke(new BasicStroke(2));
-	for (int i = 0; i < player.getRequiredPower(); i++) {
+	for (int i = 0; i < player.getRequiredPower(); i++) { // this loop
+							      // create a bunch
+							      // of boxes
 	    g.drawRect(20 + 8 * i, 40, 8, 8);
 	}
 	g.setStroke(new BasicStroke(1));
@@ -417,53 +507,53 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 	enemies.clear();
 	Enemy e;
 
-	if (waveNumber == 1) {
+	if (waveNumber == 1) { // 1st level
 	    for (int i = 0; i < 4; i++) {
 		enemies.add(new Enemy(1, 1));
 	    }
 	}
-	if (waveNumber == 2) {
+	if (waveNumber == 2) { // 2nd level
 	    for (int i = 0; i < 8; i++) {
 		enemies.add(new Enemy(1, 1));
 	    }
 	}
-	if (waveNumber == 3) {
+	if (waveNumber == 3) { // 3rd level
 	    for (int i = 0; i < 4; i++) {
 		enemies.add(new Enemy(1, 1));
 	    }
 	    enemies.add(new Enemy(1, 2));
 	    enemies.add(new Enemy(1, 2));
 	}
-	if (waveNumber == 4) {
-	    enemies.add(new Enemy(1, 3));
+	if (waveNumber == 4) { // 4rd level
+	    enemies.add(new Enemy(1, 3)); // first one is type and 2nd is rank
 	    enemies.add(new Enemy(1, 4));
 	    for (int i = 0; i < 4; i++) {
-		enemies.add(new Enemy(2, 1));
+		enemies.add(new Enemy(2, 1)); // type 2 enemies
 	    }
 	}
-	if (waveNumber == 5) {
+	if (waveNumber == 5) { // 5th level
 	    enemies.add(new Enemy(1, 4));
 	    enemies.add(new Enemy(1, 3));
 	    enemies.add(new Enemy(2, 3));
 	}
-	if (waveNumber == 6) {
+	if (waveNumber == 6) { // 6th level
 	    enemies.add(new Enemy(1, 3));
 	    for (int i = 0; i < 4; i++) {
 		enemies.add(new Enemy(2, 1));
 		enemies.add(new Enemy(3, 1));
 	    }
 	}
-	if (waveNumber == 7) {
+	if (waveNumber == 7) { // 7th level
 	    enemies.add(new Enemy(1, 3));
 	    enemies.add(new Enemy(2, 3));
 	    enemies.add(new Enemy(3, 3));
 	}
-	if (waveNumber == 8) {
+	if (waveNumber == 8) { // 8th level
 	    enemies.add(new Enemy(1, 4));
 	    enemies.add(new Enemy(2, 4));
 	    enemies.add(new Enemy(3, 4));
 	}
-	if (waveNumber == 9) {
+	if (waveNumber == 9) { // this is the last level the game is over
 	    running = false;
 	}
     }
@@ -514,7 +604,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
-	// TODO Auto-generated method stub
 
     }
 }

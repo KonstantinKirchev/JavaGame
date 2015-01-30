@@ -8,7 +8,7 @@ public class Game { //this is the main class
 
 	window.setContentPane(new GamePanel()); // we set it to new GamePanel class
 
-	window.pack(); // windows side with whatever is inside of it
+	window.pack(); // windows side with whatever is inside of it the whole package
 	window.setVisible(true);
     }
 

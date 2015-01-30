@@ -9,7 +9,7 @@ public class Explosion {
     private double x;
     private double y;
     private int r;
-    private int maxRadius; // * when the enemy dies.
+    private int maxRadius; // * when the enemy dies starts with a small ring and goes outword
 
     // CONSTRUCTOR
     public Explosion(double x, double y, int r, int max) {
@@ -18,10 +18,10 @@ public class Explosion {
 	this.r = r;
 	maxRadius = max;
     }
-
+    // we don't need getters or setters because they gonna be on the screen for a very short time
     public boolean update() {
 	// * makes the explosions
-	r += 2; // * set the time that the explosion will last.
+	r += 2; // * set the time that the explosion will go faster.
 	if (r >= maxRadius) {
 	    return true; // * ones it reaches the maxRadius the radius
 			 // disappears.

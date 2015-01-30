@@ -21,13 +21,19 @@ public class Player {
     private long firingTimer;
     private long firingDelay;
 
-    private boolean recovering;
-    private long recoveryTimer;
+    private boolean recovering; // this shows that the player is hit
+    private long recoveryTimer; // after the player is hit
+    
     private int lives;
     private Color color1; // regular color
     private Color color2; // the color when we are hit
 
     private int score;
+
+    private int powerLevel; // then he goes to powerLevel and the power gets
+			    // reset
+    private int power; // the player collects power
+    private int[] requiredPower = { 1, 2, 3, 4, 5 };
 
     // CONSTRUCTOR
     public Player() {
@@ -105,10 +111,41 @@ public class Player {
 	score += i;
     }
 
+    public void gainLife() {
+	lives++;
+    }
+
     public void loselife() {
 	lives--;
 	recovering = true;
 	recoveryTimer = System.nanoTime();
+    }
+
+    public void increasePower(int i) {
+	power += i;
+	if (powerLevel == 4) { // we check if we have enough power to get to the
+			       // next level
+	    if (power > requiredPower[powerLevel]) {
+		power = requiredPower[powerLevel];
+	    }
+	    return;
+	}
+	if (power >= requiredPower[powerLevel]) {
+	    power -= requiredPower[powerLevel];
+	    powerLevel++;
+	}
+    }
+
+    public int getPowerLevel() {
+	return powerLevel;
+    }
+
+    public int getPower() {
+	return power;
+    }
+
+    public int getRequiredPower() {
+	return requiredPower[powerLevel]; // requiredPower for the current level
     }
 
     public void update() {
@@ -139,10 +176,11 @@ public class Player {
 
 	dx = 0;
 	dy = 0;
-
+	
+	// firing
 	if (firing) {
 	    long elapsed = (System.nanoTime() - firingTimer) / 1000000;
-	    if (elapsed > firingDelay) { // we compare the two
+	    if (elapsed > firingDelay) { // we compare the two. Invinsible after being hit
 		GamePanel.bullets.add(new Bullet(270, x, y)); // we fire a
 							      // bullet.The
 							      // arguments that
@@ -156,14 +194,6 @@ public class Player {
 							      // y
 		firingTimer = System.nanoTime(); // and then we reset the
 						 // firingTimer
-	    }
-	}
-	// firing
-	if (firing) {
-	    long elapsed = (System.nanoTime() - firingTimer) / 1000000;
-	    if (elapsed > firingDelay) { // invinsible after being hit
-		firingTimer = System.nanoTime();
-
 		if (powerLevel < 2) {
 		    GamePanel.bullets.add(new Bullet(270, x, y));
 		} else if (powerLevel < 4) {
@@ -171,7 +201,7 @@ public class Player {
 		    GamePanel.bullets.add(new Bullet(270, x - 5, y));
 		} else {
 		    GamePanel.bullets.add(new Bullet(270, x, y));
-		    GamePanel.bullets.add(new Bullet(275, x + 5, y));
+		    GamePanel.bullets.add(new Bullet(275, x + 5, y)); // the spray of firing bullets
 		    GamePanel.bullets.add(new Bullet(265, x + 5, y));
 		}
 	    }
